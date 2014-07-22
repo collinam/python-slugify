@@ -5,11 +5,11 @@ __version__ = '0.0.7'
 __all__ = ['slugify']
 
 import re
-import unicodedata
-import types
 import sys
-from htmlentitydefs import name2codepoint
+import types
+import unicodedata
 from unidecode import unidecode
+from htmlentitydefs import name2codepoint
 
 # character entity reference
 CHAR_ENTITY_REXP = re.compile('&(%s);' % '|'.join(name2codepoint))
@@ -22,7 +22,9 @@ HEX_REXP = re.compile('&#x([\da-fA-F]+);')
 
 REPLACE1_REXP = re.compile(r'[\']+')
 REPLACE2_REXP = re.compile(r'[^-a-z0-9]+')
+KEEPEXT_REXP = re.compile(r'[^-a-z0-9.]+')
 REMOVE_REXP = re.compile('-{2,}')
+
 
 def smart_truncate(string, max_length=0, word_boundaries=False, separator=' '):
     """ Truncate a string """
@@ -52,19 +54,19 @@ def smart_truncate(string, max_length=0, word_boundaries=False, separator=' '):
     return truncated.strip(separator)
 
 
-def slugify(text, entities=True, decimal=True, hexadecimal=True, max_length=0, word_boundary=False, separator='-'):
+def slugify(text, entities=True, decimal=True, keep_ext=False, hexadecimal=True, max_length=0, word_boundary=False, separator='-'):
     """ Make a slug from the given text """
 
     # text to unicode
-    if type(text) != types.UnicodeType:
+    if not isinstance(text, types.UnicodeType):
         text = unicode(text, 'utf-8', 'ignore')
 
     # decode unicode ( 影師嗎 = Ying Shi Ma)
     text = unidecode(text)
 
     # text back to unicode
-    if type(text) != types.UnicodeType:
-    	text = unicode(text, 'utf-8', 'ignore')
+    if not isinstance(text, types.UnicodeType):
+        text = unicode(text, 'utf-8', 'ignore')
 
     # character entity reference
     if entities:
@@ -87,11 +89,15 @@ def slugify(text, entities=True, decimal=True, hexadecimal=True, max_length=0, w
     # translate
     text = unicodedata.normalize('NFKD', text)
     if sys.version_info < (3,):
-    	text = text.encode('ascii', 'ignore')
+        text = text.encode('ascii', 'ignore')
 
     # replace unwanted characters
     text = REPLACE1_REXP.sub('', text.lower()) # replace ' with nothing instead with -
-    text = REPLACE2_REXP.sub('-', text.lower())
+
+    if keep_ext is True:
+        text = KEEPEXT_REXP.sub('-', text.lower())
+    else:
+        text = REPLACE2_REXP.sub('-', text.lower())
 
     # remove redundant -
     text = REMOVE_REXP.sub('-', text).strip('-')
